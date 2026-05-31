@@ -1,6 +1,21 @@
 # Container Usage
 
-This project can run inside Docker while reusing the host `agy` binary and its existing authentication/config.
+This project can run inside Docker while reusing the host Antigravity CLI (`agy`) binary and its existing authentication/config.
+
+## Prerequisite: Antigravity CLI
+
+Install and authenticate Antigravity CLI on the host machine first. The Docker image does
+not install or bundle `agy`; it mounts the host command into the container.
+
+Verify that `agy` works locally:
+
+```bash
+command -v agy
+agy --version
+```
+
+If `agy` is not found, install Antigravity CLI and complete its login/authentication flow
+before using this container setup.
 
 ## 1. Create `.env`
 
@@ -15,6 +30,25 @@ AGY_BIN=/home/your-user/.local/bin/agy
 AGY_HOME=/home/your-user/.gemini
 DISCORD_BOT_TOKEN=
 DISCORD_CHANNEL_ID=
+```
+
+`AGY_BIN` is the full host path to the `agy` executable. Use this to find it:
+
+```bash
+command -v agy
+```
+
+Example:
+
+```env
+AGY_BIN=/home/your-user/.local/bin/agy
+```
+
+`AGY_HOME` is the host directory containing Antigravity CLI authentication/config. In a
+standard setup this is usually:
+
+```env
+AGY_HOME=/home/your-user/.gemini
 ```
 
 `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are required because `run.sh` posts the generated report summary to Discord after report generation.

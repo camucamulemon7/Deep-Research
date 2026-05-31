@@ -26,6 +26,17 @@ If yesterday's report directory does not exist, the review step is skipped and t
 
 Do not commit `.env`.
 
+This project expects the Antigravity CLI command `agy` to be installed and authenticated
+on the host machine before running Docker. The Docker image does not install or bundle
+Antigravity CLI; it mounts your existing host binary and config.
+
+Check your local install:
+
+```bash
+command -v agy
+agy --version
+```
+
 Create one from the example:
 
 ```bash
@@ -41,6 +52,19 @@ DISCORD_BOT_TOKEN=
 DISCORD_CHANNEL_ID=
 TZ=Asia/Tokyo
 RUN_AT=07:30
+```
+
+`AGY_BIN` is the full host path to the `agy` executable. You can usually get it with:
+
+```bash
+command -v agy
+```
+
+`AGY_HOME` is the host directory where Antigravity CLI stores its authentication/config.
+For a standard install this is usually:
+
+```text
+~/.gemini
 ```
 
 `OPENAI_API_KEY`, `GOOGLE_API_KEY`, and `GEMINI_API_KEY` are optional passthrough values
