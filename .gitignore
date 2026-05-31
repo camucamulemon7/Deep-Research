@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated reports and run artifacts
+agy-market-report/
+
+# Local editor/OS files
+.DS_Store
+.idea/
+.vscode/
