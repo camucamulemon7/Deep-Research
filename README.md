@@ -135,3 +135,7 @@ You can inspect generated files outside the container normally.
 - `.env` is ignored by Git.
 - `agy-market-report/` is ignored by Git because reports may contain run-specific data.
 - Discord bot tokens should only be provided through environment variables.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
