@@ -4,3 +4,8 @@ __pycache__
 *.pyc
 .env
 agy-market-report
+cache
+.opencode/node_modules
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock

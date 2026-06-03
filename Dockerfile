@@ -13,9 +13,14 @@ RUN apt-get update \
       curl \
       findutils \
       jq \
+      nodejs \
+      npm \
       procps \
       tzdata \
     && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g opencode-ai \
+    && npm cache clean --force
 
 RUN useradd --create-home --shell /bin/bash app
 

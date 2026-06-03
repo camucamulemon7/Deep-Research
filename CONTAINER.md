@@ -53,6 +53,34 @@ AGY_HOME=/home/your-user/.gemini
 
 `DISCORD_BOT_TOKEN` and `DISCORD_CHANNEL_ID` are required because `run.sh` posts the generated report summary to Discord after report generation.
 
+## Agent Backend
+
+The container uses the same backend switch as local runs:
+
+```env
+AGENT_BACKEND=agy
+```
+
+To use OpenCode instead:
+
+```env
+AGENT_BACKEND=opencode
+OPENCODE_COMMAND=opencode
+OPENCODE_MODEL=
+OPENCODE_AGENT=
+OPENCODE_RUN_ARGS=
+OPENCODE_CONFIG=
+OPENCODE_CONFIG_DIR=
+```
+
+The Docker image installs the OpenCode CLI from npm. Make sure provider credentials are
+available through environment variables or OpenCode's config/auth files. The host `agy`
+command is still mounted because OpenCode routes web search through the local `agy`
+wrapper.
+
+When `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR` are blank, `run.sh` uses the repository
+local `opencode.json` and `.opencode/` directory.
+
 ## 2. Build
 
 ```bash
@@ -106,5 +134,6 @@ For a smoke test, set `RUN_ON_START=1` temporarily. The scheduler will run `./ru
 ## Notes
 
 - The image does not bundle `agy`; it mounts your host `agy` binary at `/usr/local/bin/agy`.
+- The image installs `opencode` with npm for `AGENT_BACKEND=opencode`.
 - The `AGY_HOME` directory is mounted to `/home/app/.gemini` so existing `agy` authentication is available in the container.
 - If your `agy` setup uses API-key environment variables, add them to `.env`.

@@ -7,6 +7,14 @@ venv/
 
 # Generated reports and run artifacts
 agy-market-report/
+cache/
+.agent-tools/
+
+# OpenCode local package/cache files; keep project agents under .opencode/agents/.
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
 
 # Local editor/OS files
 .DS_Store

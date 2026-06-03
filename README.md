@@ -12,13 +12,44 @@ The workflow:
 If yesterday's report directory does not exist, the review step is skipped and the base
 [`prompt_market_research.md`](prompt_market_research.md) prompt is used directly.
 
+## Previous-Day Review
+
+When `agy-market-report/YYYY-MM-DD/` exists for yesterday, `run.sh` runs a review phase
+before generating today's report. The previous report directory must contain:
+
+```text
+morning_market_report.md
+market_score.json
+prompt_market_research_YYYY-MM-DD.md
+```
+
+The review phase writes:
+
+```text
+agy-market-report/YYYY-MM-DD/result/next_day_evaluation_report.md
+agy-market-report/YYYY-MM-DD/result/evaluation_score.json
+agy-market-report/YYYY-MM-DD/result/prompt_improvement.md
+```
+
+`prompt_improvement.md` is then copied to today's report directory as:
+
+```text
+agy-market-report/YYYY-MM-DD/report/prompt_market_research_YYYY-MM-DD.md
+```
+
+If yesterday's directory is missing, this phase is skipped and the base prompt is copied
+instead.
+
 ## Files
 
 - [`run.sh`](run.sh): Main workflow.
+- [`AGENTS.md`](AGENTS.md): Shared instructions for coding agents working in this repository.
 - [`prompt_market_research.md`](prompt_market_research.md): Base market-report generation prompt.
 - [`prompt_improvement_points.md`](prompt_improvement_points.md): Previous-report evaluation and prompt-improvement prompt.
 - [`scripts/post_to_discord.py`](scripts/post_to_discord.py): Posts a Discord-friendly report summary.
 - [`scripts/scheduler.py`](scripts/scheduler.py): Simple Docker-friendly daily scheduler.
+- [`opencode.json`](opencode.json): Project-level OpenCode defaults.
+- [`.opencode/agents/market-reporter.md`](.opencode/agents/market-reporter.md): OpenCode market-report agent.
 - [`compose.yaml`](compose.yaml): Manual and scheduled Docker services.
 - [`CONTAINER.md`](CONTAINER.md): Container usage details.
 
@@ -43,9 +74,13 @@ Create one from the example:
 cp .env.example .env
 ```
 
+`run.sh` reads `.env` automatically for local runs. Environment variables that are
+already exported by your shell or Docker Compose take precedence.
+
 Set at least:
 
 ```env
+AGENT_BACKEND=agy
 AGY_BIN=/path/to/agy
 AGY_HOME=/path/to/.gemini
 DISCORD_BOT_TOKEN=
@@ -70,10 +105,62 @@ For a standard install this is usually:
 `OPENAI_API_KEY`, `GOOGLE_API_KEY`, and `GEMINI_API_KEY` are optional passthrough values
 for setups where `agy` reads provider credentials from the environment.
 
+## Agent Backend
+
+The default backend is Antigravity CLI:
+
+```env
+AGENT_BACKEND=agy
+```
+
+To run the report workflow with OpenCode instead, install and authenticate OpenCode,
+then set:
+
+```env
+AGENT_BACKEND=opencode
+OPENCODE_COMMAND=opencode
+```
+
+Optional OpenCode settings:
+
+```env
+OPENCODE_MODEL=openai/gpt-5.4-mini
+OPENCODE_AGENT=agent-name
+OPENCODE_RUN_ARGS=--format json
+```
+
+When `AGENT_BACKEND=opencode`, `run.sh` automatically points OpenCode at the
+repository-local `opencode.json` and `.opencode/` directory unless `OPENCODE_CONFIG` or
+`OPENCODE_CONFIG_DIR` are already set.
+
+The repository-local OpenCode default model is `openai/gpt-5.4-mini`.
+
+### Agent Instruction Files
+
+Use [`AGENTS.md`](AGENTS.md) for backend-neutral repository rules: workflow, output
+contracts, market-data safety rules, and what files must not be committed.
+
+Use [`.opencode/agents/`](.opencode/agents/) for OpenCode-specific behavior: agent
+prompts, permissions, tool routing, and how OpenCode should call the local `agy` search
+wrapper.
+
+`run.sh` validates the expected output files after each agent run, so either backend must
+write the same files: `prompt_improvement.md` during the review phase and
+`morning_market_report.md` during the report phase.
+
+The Docker image includes the OpenCode CLI. The host `agy` binary/config is still mounted
+because OpenCode search is routed through the local `agy` wrapper.
+
 ## Manual Run
 
 ```bash
 ./run.sh
+```
+
+For a smoke test that should generate files but not post to Discord:
+
+```bash
+SKIP_DISCORD_POST=1 ./run.sh
 ```
 
 ## Docker Run
