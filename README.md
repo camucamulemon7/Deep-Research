@@ -23,6 +23,11 @@ market_score.json
 prompt_market_research_YYYY-MM-DD.md
 ```
 
+If the exact prompt filename is missing but exactly one `prompt_market_research_*.md`
+file exists in the previous report directory, `run.sh` uses that file as a fallback and
+prints a warning. If multiple candidates exist, the run stops and asks you to keep only
+one or rename the intended file to the expected date.
+
 The review phase writes:
 
 ```text
@@ -162,6 +167,38 @@ For a smoke test that should generate files but not post to Discord:
 ```bash
 SKIP_DISCORD_POST=1 ./run.sh
 ```
+
+### Reruns And Phase Control
+
+By default, `run.sh` uses the current Asia/Tokyo date and runs every phase:
+
+```env
+RUN_PHASE=all
+```
+
+For backfills or reruns, override the target dates:
+
+```bash
+RUN_DATE=2026-06-04 PREVIOUS_DATE=2026-06-03 SKIP_DISCORD_POST=1 ./run.sh
+```
+
+`PREVIOUS_DATE` is optional. When omitted, it is calculated as one day before
+`RUN_DATE`.
+
+You can also run one phase at a time:
+
+```bash
+RUN_PHASE=review RUN_DATE=2026-06-04 PREVIOUS_DATE=2026-06-03 ./run.sh
+RUN_PHASE=report RUN_DATE=2026-06-04 SKIP_DISCORD_POST=1 ./run.sh
+RUN_PHASE=post RUN_DATE=2026-06-04 ./run.sh
+```
+
+Phase behavior:
+
+- `all`: run review when previous data exists, then report, then Discord post.
+- `review`: require previous data and only write review outputs plus today's improved prompt.
+- `report`: generate today's report using today's prompt if it exists, otherwise the latest improved prompt, otherwise the base prompt.
+- `post`: post an existing `morning_market_report.md`.
 
 ## Docker Run
 

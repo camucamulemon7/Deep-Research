@@ -9,6 +9,56 @@ link_input_file() {
   ln -s "$source_file" "$target_file"
 }
 
+normalize_date() {
+  local value="$1"
+  local label="$2"
+
+  if ! TZ=Asia/Tokyo date -d "$value" +%Y-%m-%d; then
+    echo "Invalid $label date: $value" >&2
+    exit 1
+  fi
+}
+
+previous_date_for() {
+  local value="$1"
+
+  TZ=Asia/Tokyo date -d "$value -1 day" +%Y-%m-%d
+}
+
+find_previous_prompt() {
+  local previous_report_dir="$1"
+  local previous_date="$2"
+  local expected_prompt="$previous_report_dir/prompt_market_research_${previous_date}.md"
+  local -a candidates
+
+  if [[ -f "$expected_prompt" ]]; then
+    printf '%s\n' "$expected_prompt"
+    return
+  fi
+
+  shopt -s nullglob
+  candidates=("$previous_report_dir"/prompt_market_research_*.md)
+  shopt -u nullglob
+
+  case "${#candidates[@]}" in
+    0)
+      echo "Original prompt not found: $expected_prompt" >&2
+      exit 1
+      ;;
+    1)
+      echo "Expected previous prompt not found: $expected_prompt" >&2
+      echo "Using fallback previous prompt: ${candidates[0]}" >&2
+      printf '%s\n' "${candidates[0]}"
+      ;;
+    *)
+      echo "Expected previous prompt not found: $expected_prompt" >&2
+      echo "Multiple fallback previous prompts found. Rename one to the expected date or remove extras:" >&2
+      printf '  %s\n' "${candidates[@]}" >&2
+      exit 1
+      ;;
+  esac
+}
+
 run_agent() {
   local work_dir="$1"
   local prompt_file="$2"
@@ -111,8 +161,19 @@ if [[ -f "$BASE_DIR/.env" ]]; then
   done < "$BASE_DIR/.env"
 fi
 
-YESTERDAY="$(TZ=Asia/Tokyo date -d 'yesterday' +%Y-%m-%d)"
-TODAY="$(TZ=Asia/Tokyo date +%Y-%m-%d)"
+if [[ -n "${RUN_DATE:-}" ]]; then
+  TODAY="$(normalize_date "$RUN_DATE" "RUN_DATE")"
+else
+  TODAY="$(TZ=Asia/Tokyo date +%Y-%m-%d)"
+fi
+
+if [[ -n "${PREVIOUS_DATE:-}" ]]; then
+  YESTERDAY="$(normalize_date "$PREVIOUS_DATE" "PREVIOUS_DATE")"
+else
+  YESTERDAY="$(previous_date_for "$TODAY")"
+fi
+
+RUN_PHASE="${RUN_PHASE:-all}"
 
 YESTERDAY_DIR="$BASE_DIR/agy-market-report/$YESTERDAY"
 TODAY_DIR="$BASE_DIR/agy-market-report/$TODAY"
@@ -132,14 +193,26 @@ if [[ ! -f "$BASE_REPORT_PROMPT" ]]; then
   exit 1
 fi
 
-if [[ -d "$YESTERDAY_DIR" ]]; then
+run_review_phase() {
+  local require_previous="$1"
+
+  if [[ ! -d "$YESTERDAY_DIR" ]]; then
+    if [[ "$require_previous" == "1" ]]; then
+      echo "Yesterday directory not found: $YESTERDAY_DIR" >&2
+      exit 1
+    fi
+    echo "Yesterday directory not found, skipping review phase: $YESTERDAY_DIR" >&2
+    cp "$BASE_REPORT_PROMPT" "$REPORT_PROMPT"
+    return
+  fi
+
   if [[ -d "$YESTERDAY_REPORT_DIR" ]]; then
     PREVIOUS_REPORT_DIR="$YESTERDAY_REPORT_DIR"
   else
     PREVIOUS_REPORT_DIR="$YESTERDAY_DIR"
   fi
 
-  ORIGINAL_PROMPT="$PREVIOUS_REPORT_DIR/prompt_market_research_${YESTERDAY}.md"
+  ORIGINAL_PROMPT="$(find_previous_prompt "$PREVIOUS_REPORT_DIR" "$YESTERDAY")"
   PREVIOUS_REPORT_FILE="$PREVIOUS_REPORT_DIR/morning_market_report.md"
 
   if [[ ! -f "$PREVIOUS_REPORT_FILE" && -f "$PREVIOUS_REPORT_DIR/morning_market_report.html" ]]; then
@@ -147,11 +220,6 @@ if [[ -d "$YESTERDAY_DIR" ]]; then
   fi
 
   mkdir -p "$RESULT_INPUT_DIR"
-
-  if [[ ! -f "$ORIGINAL_PROMPT" ]]; then
-    echo "Original prompt not found: $ORIGINAL_PROMPT" >&2
-    exit 1
-  fi
 
   for required_file in "$PREVIOUS_REPORT_FILE" "$PREVIOUS_REPORT_DIR/market_score.json"; do
     if [[ ! -f "$required_file" ]]; then
@@ -177,21 +245,62 @@ if [[ -d "$YESTERDAY_DIR" ]]; then
   fi
 
   cp "$IMPROVED_PROMPT" "$REPORT_PROMPT"
-else
-  echo "Yesterday directory not found, skipping review phase: $YESTERDAY_DIR" >&2
+}
+
+prepare_report_prompt() {
+  if [[ -f "$REPORT_PROMPT" ]]; then
+    return
+  fi
+
+  if [[ -f "$IMPROVED_PROMPT" ]]; then
+    cp "$IMPROVED_PROMPT" "$REPORT_PROMPT"
+    return
+  fi
+
   cp "$BASE_REPORT_PROMPT" "$REPORT_PROMPT"
-fi
+}
 
-run_agent "$REPORT_DIR" "$REPORT_PROMPT" "morning market report $TODAY"
+run_report_phase() {
+  prepare_report_prompt
+  run_agent "$REPORT_DIR" "$REPORT_PROMPT" "morning market report $TODAY"
 
-if [[ ! -f "$MORNING_REPORT" ]]; then
-  echo "Morning market report not found: $MORNING_REPORT" >&2
-  exit 1
-fi
+  if [[ ! -f "$MORNING_REPORT" ]]; then
+    echo "Morning market report not found: $MORNING_REPORT" >&2
+    exit 1
+  fi
+}
 
-if [[ "${SKIP_DISCORD_POST:-0}" == "1" ]]; then
-  echo "SKIP_DISCORD_POST=1, skipping Discord post: $MORNING_REPORT" >&2
-  exit 0
-fi
+run_post_phase() {
+  if [[ ! -f "$MORNING_REPORT" ]]; then
+    echo "Morning market report not found: $MORNING_REPORT" >&2
+    exit 1
+  fi
 
-"$BASE_DIR/scripts/post_to_discord.py" --summary "$MORNING_REPORT"
+  if [[ "${SKIP_DISCORD_POST:-0}" == "1" ]]; then
+    echo "SKIP_DISCORD_POST=1, skipping Discord post: $MORNING_REPORT" >&2
+    return
+  fi
+
+  "$BASE_DIR/scripts/post_to_discord.py" --summary "$MORNING_REPORT"
+}
+
+case "$RUN_PHASE" in
+  all)
+    run_review_phase 0
+    run_report_phase
+    run_post_phase
+    ;;
+  review)
+    run_review_phase 1
+    ;;
+  report)
+    run_report_phase
+    ;;
+  post)
+    run_post_phase
+    ;;
+  *)
+    echo "Unsupported RUN_PHASE: $RUN_PHASE. Use all, review, report, or post." >&2
+    exit 1
+    ;;
+esac
