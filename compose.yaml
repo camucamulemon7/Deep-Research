@@ -14,6 +14,9 @@ services:
       OPENCODE_CONFIG: ${OPENCODE_CONFIG:-}
       OPENCODE_CONFIG_DIR: ${OPENCODE_CONFIG_DIR:-}
       SKIP_DISCORD_POST: ${SKIP_DISCORD_POST:-0}
+      SKIP_ARTIFACT_VALIDATION: ${SKIP_ARTIFACT_VALIDATION:-0}
+      SKIP_ARTIFACT_NORMALIZATION: ${SKIP_ARTIFACT_NORMALIZATION:-0}
+      KEEP_EXISTING_REPORT_ARTIFACTS: ${KEEP_EXISTING_REPORT_ARTIFACTS:-0}
       RUN_PHASE: ${RUN_PHASE:-all}
       RUN_DATE: ${RUN_DATE:-}
       PREVIOUS_DATE: ${PREVIOUS_DATE:-}
@@ -26,7 +29,12 @@ services:
       # Mount the project root so generated agy-market-report files are visible on the host.
       - .:/workspace
       - ${AGY_BIN:?Set AGY_BIN to the host agy binary path, e.g. /home/you/.local/bin/agy}:/usr/local/bin/agy:ro
+      - ${OPENCODE_BIN:?Set OPENCODE_BIN to the resolved host opencode binary path, e.g. readlink -f "$(command -v opencode)"}:/usr/local/bin/opencode:ro
       - ${AGY_HOME:-${HOME}/.gemini}:/home/app/.gemini
+      - ${OPENCODE_CONFIG_HOME:-${HOME}/.config/opencode}:/home/app/.config/opencode
+      - ${OPENCODE_DATA_HOME:-${HOME}/.local/share/opencode}:/home/app/.local/share/opencode
+      - ${OPENCODE_STATE_HOME:-${HOME}/.local/state/opencode}:/home/app/.local/state/opencode
+      - ${OPENCODE_CACHE_HOME:-${HOME}/.cache/opencode}:/home/app/.cache/opencode
     command: ["./run.sh"]
 
   deep-research-scheduler:
@@ -45,6 +53,9 @@ services:
       OPENCODE_CONFIG: ${OPENCODE_CONFIG:-}
       OPENCODE_CONFIG_DIR: ${OPENCODE_CONFIG_DIR:-}
       SKIP_DISCORD_POST: ${SKIP_DISCORD_POST:-0}
+      SKIP_ARTIFACT_VALIDATION: ${SKIP_ARTIFACT_VALIDATION:-0}
+      SKIP_ARTIFACT_NORMALIZATION: ${SKIP_ARTIFACT_NORMALIZATION:-0}
+      KEEP_EXISTING_REPORT_ARTIFACTS: ${KEEP_EXISTING_REPORT_ARTIFACTS:-0}
       RUN_PHASE: ${RUN_PHASE:-all}
       RUN_DATE: ${RUN_DATE:-}
       PREVIOUS_DATE: ${PREVIOUS_DATE:-}
@@ -60,5 +71,10 @@ services:
       # Mount the project root so generated agy-market-report files are visible on the host.
       - .:/workspace
       - ${AGY_BIN:?Set AGY_BIN to the host agy binary path, e.g. /home/you/.local/bin/agy}:/usr/local/bin/agy:ro
+      - ${OPENCODE_BIN:?Set OPENCODE_BIN to the resolved host opencode binary path, e.g. readlink -f "$(command -v opencode)"}:/usr/local/bin/opencode:ro
       - ${AGY_HOME:-${HOME}/.gemini}:/home/app/.gemini
+      - ${OPENCODE_CONFIG_HOME:-${HOME}/.config/opencode}:/home/app/.config/opencode
+      - ${OPENCODE_DATA_HOME:-${HOME}/.local/share/opencode}:/home/app/.local/share/opencode
+      - ${OPENCODE_STATE_HOME:-${HOME}/.local/state/opencode}:/home/app/.local/state/opencode
+      - ${OPENCODE_CACHE_HOME:-${HOME}/.cache/opencode}:/home/app/.cache/opencode
     command: ["python3", "scripts/scheduler.py"]

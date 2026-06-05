@@ -1,11 +1,12 @@
 # Container Usage
 
-This project can run inside Docker while reusing the host Antigravity CLI (`agy`) binary and its existing authentication/config.
+This project can run inside Docker while reusing the host Antigravity CLI (`agy`) and
+OpenCode binaries plus their existing authentication/config.
 
-## Prerequisite: Antigravity CLI
+## Prerequisite: Host CLIs
 
-Install and authenticate Antigravity CLI on the host machine first. The Docker image does
-not install or bundle `agy`; it mounts the host command into the container.
+Install and authenticate the host CLI you plan to use first. The Docker image does not
+bundle `agy` or `opencode`; it mounts the host commands into the container.
 
 Verify that `agy` works locally:
 
@@ -16,6 +17,14 @@ agy --version
 
 If `agy` is not found, install Antigravity CLI and complete its login/authentication flow
 before using this container setup.
+
+Verify that `opencode` works locally when using `AGENT_BACKEND=opencode`:
+
+```bash
+command -v opencode
+opencode --version
+opencode auth list
+```
 
 ## 1. Create `.env`
 
@@ -28,6 +37,7 @@ Edit `.env`:
 ```env
 AGY_BIN=/home/your-user/.local/bin/agy
 AGY_HOME=/home/your-user/.gemini
+OPENCODE_BIN=/home/your-user/.npm-global/lib/node_modules/opencode-ai/bin/opencode.exe
 DISCORD_BOT_TOKEN=
 DISCORD_CHANNEL_ID=
 ```
@@ -42,6 +52,13 @@ Example:
 
 ```env
 AGY_BIN=/home/your-user/.local/bin/agy
+```
+
+`OPENCODE_BIN` is the full host path to the OpenCode executable. Prefer the resolved
+binary path rather than an npm symlink:
+
+```bash
+readlink -f "$(command -v opencode)"
 ```
 
 `AGY_HOME` is the host directory containing Antigravity CLI authentication/config. In a
@@ -66,17 +83,26 @@ To use OpenCode instead:
 ```env
 AGENT_BACKEND=opencode
 OPENCODE_COMMAND=opencode
-OPENCODE_MODEL=
-OPENCODE_AGENT=
+OPENCODE_MODEL=openai/gpt-5.4-mini
+OPENCODE_AGENT=market-reporter
 OPENCODE_RUN_ARGS=
 OPENCODE_CONFIG=
 OPENCODE_CONFIG_DIR=
 ```
 
-The Docker image installs the OpenCode CLI from npm. Make sure provider credentials are
-available through environment variables or OpenCode's config/auth files. The host `agy`
-command is still mounted because OpenCode routes web search through the local `agy`
-wrapper.
+The host OpenCode binary is mounted to `/usr/local/bin/opencode`. Make sure provider
+credentials are available through environment variables or OpenCode's config/auth files.
+The host `agy` command is still mounted because OpenCode routes web search through the
+local `agy` wrapper.
+
+Docker also mounts the standard OpenCode directories:
+
+```text
+~/.config/opencode
+~/.local/share/opencode
+~/.local/state/opencode
+~/.cache/opencode
+```
 
 When `OPENCODE_CONFIG` and `OPENCODE_CONFIG_DIR` are blank, `run.sh` uses the repository
 local `opencode.json` and `.opencode/` directory.
@@ -134,6 +160,6 @@ For a smoke test, set `RUN_ON_START=1` temporarily. The scheduler will run `./ru
 ## Notes
 
 - The image does not bundle `agy`; it mounts your host `agy` binary at `/usr/local/bin/agy`.
-- The image installs `opencode` with npm for `AGENT_BACKEND=opencode`.
+- The image does not bundle `opencode`; it mounts your host OpenCode binary at `/usr/local/bin/opencode`.
 - The `AGY_HOME` directory is mounted to `/home/app/.gemini` so existing `agy` authentication is available in the container.
 - If your `agy` setup uses API-key environment variables, add them to `.env`.

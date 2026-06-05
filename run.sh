@@ -185,6 +185,8 @@ BASE_REPORT_PROMPT="$BASE_DIR/prompt_market_research.md"
 IMPROVED_PROMPT="$RESULT_DIR/prompt_improvement.md"
 REPORT_PROMPT="$REPORT_DIR/prompt_market_research_${TODAY}.md"
 MORNING_REPORT="$REPORT_DIR/morning_market_report.md"
+NORMALIZER="$BASE_DIR/scripts/normalize_report_artifacts.py"
+VALIDATOR="$BASE_DIR/scripts/validate_report_artifacts.py"
 
 mkdir -p "$REPORT_DIR"
 
@@ -260,14 +262,56 @@ prepare_report_prompt() {
   cp "$BASE_REPORT_PROMPT" "$REPORT_PROMPT"
 }
 
+clean_report_artifacts() {
+  if [[ "${KEEP_EXISTING_REPORT_ARTIFACTS:-0}" == "1" ]]; then
+    return
+  fi
+
+  rm -f \
+    "$REPORT_DIR/research_context.md" \
+    "$REPORT_DIR/research_context.json" \
+    "$REPORT_DIR/research_prompt.md" \
+    "$REPORT_DIR/market_facts.json" \
+    "$REPORT_DIR/market_thesis.md" \
+    "$REPORT_DIR/market_score.json" \
+    "$REPORT_DIR/report_audit.md" \
+    "$REPORT_DIR/morning_market_report.md" \
+    "$REPORT_DIR/execution_plan.md"
+}
+
 run_report_phase() {
   prepare_report_prompt
+  clean_report_artifacts
   run_agent "$REPORT_DIR" "$REPORT_PROMPT" "morning market report $TODAY"
 
   if [[ ! -f "$MORNING_REPORT" ]]; then
     echo "Morning market report not found: $MORNING_REPORT" >&2
     exit 1
   fi
+
+  run_validate_phase
+}
+
+run_validate_phase() {
+  if [[ "${SKIP_ARTIFACT_VALIDATION:-0}" == "1" ]]; then
+    echo "SKIP_ARTIFACT_VALIDATION=1, skipping artifact validation: $REPORT_DIR" >&2
+    return
+  fi
+
+  if [[ "${SKIP_ARTIFACT_NORMALIZATION:-0}" != "1" ]]; then
+    if [[ ! -x "$NORMALIZER" ]]; then
+      echo "Report artifact normalizer not found or not executable: $NORMALIZER" >&2
+      exit 1
+    fi
+    "$NORMALIZER" "$REPORT_DIR"
+  fi
+
+  if [[ ! -x "$VALIDATOR" ]]; then
+    echo "Report artifact validator not found or not executable: $VALIDATOR" >&2
+    exit 1
+  fi
+
+  "$VALIDATOR" "$REPORT_DIR"
 }
 
 run_post_phase() {
@@ -296,11 +340,14 @@ case "$RUN_PHASE" in
   report)
     run_report_phase
     ;;
+  validate)
+    run_validate_phase
+    ;;
   post)
     run_post_phase
     ;;
   *)
-    echo "Unsupported RUN_PHASE: $RUN_PHASE. Use all, review, report, or post." >&2
+    echo "Unsupported RUN_PHASE: $RUN_PHASE. Use all, review, report, validate, or post." >&2
     exit 1
     ;;
 esac

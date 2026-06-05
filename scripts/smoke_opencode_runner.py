@@ -63,6 +63,9 @@ def main():
                 "| --- | --- | --- | --- | --- |",
                 "| 00:00 | smoke | test | low | smoke test |",
                 "",
+                "## 10. 出典・検証メモ",
+                "- Smoke Source: https://example.com/smoke | 取得時刻: smoke-test",
+                "",
                 "## 12. 結びの要約",
                 "- smoke test completed",
             ]
@@ -70,8 +73,68 @@ def main():
         + "\n",
         encoding="utf-8",
     )
+    (work_dir / "research_context.md").write_text(
+        "# Smoke Research Context\n\n- source: https://example.com/smoke\n- fetched: smoke-test\n",
+        encoding="utf-8",
+    )
+    (work_dir / "market_facts.json").write_text(
+        json.dumps(
+            {
+                "as_of_jst": "smoke-test",
+                "target_us_session_date": "smoke",
+                "target_japan_session_date": "smoke",
+                "market_data": {
+                    "dow": {
+                        "value": None,
+                        "change": None,
+                        "source_name": "Smoke Source",
+                        "source_url": "https://example.com/smoke",
+                        "as_of_jst": "smoke-test",
+                        "confidence": "low",
+                    }
+                },
+                "top_news": [
+                    {
+                        "title": "Smoke test",
+                        "summary": "Smoke test news item.",
+                        "source_name": "Smoke Source",
+                        "source_url": "https://example.com/smoke",
+                        "as_of_jst": "smoke-test",
+                        "confidence": "low",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (work_dir / "market_thesis.md").write_text(
+        "# Smoke Thesis\n\n- 中心テーマ: smoke test\n- 強気材料: smoke test\n- 弱気材料: smoke test\n",
+        encoding="utf-8",
+    )
     (work_dir / "market_score.json").write_text(
-        json.dumps({"smoke_test": True}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                "scores": [
+                    {
+                        "name": "米国市場方向感",
+                        "score": 0,
+                        "confidence": "low",
+                        "supporting_factors": ["smoke test"],
+                        "opposing_factors": ["取得不可データあり"],
+                    }
+                ]
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (work_dir / "report_audit.md").write_text(
+        "# Smoke Audit\n\n- source: checked\n- 日付: checked\n- 矛盾: none\n- 取得不可: noted\n",
         encoding="utf-8",
     )
 

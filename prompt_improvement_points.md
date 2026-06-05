@@ -55,6 +55,25 @@ You must read `prompt_market_research_YYYY-MM-DD.md` before proposing prompt imp
 * The actual problems found in the previous day's deliverables
 * The wording, structure, missing requirements, and ambiguities in the original prompt
 
+When you create `prompt_improvement.md`, preserve the repository's current output contract.
+Do not simplify, remove, or weaken staged artifact requirements from the original prompt.
+The improved prompt must still require the next report phase to create:
+
+1. `research_context.md`
+2. `market_facts.json`
+3. `market_thesis.md`
+4. `market_score.json`
+5. `report_audit.md`
+6. `morning_market_report.md`
+
+The improved prompt must keep these staged-reasoning rules:
+- Important numerical facts must appear in `market_facts.json` before they are used elsewhere.
+- `market_facts.json` must include top-level `as_of_jst`, `target_us_session_date`, `target_japan_session_date`, non-empty `market_data`, and non-empty `top_news`.
+- Each important fact must include `source_name`, `source_url`, `as_of_jst`, and `confidence`.
+- Every major score object and sector score in `market_score.json` must include `supporting_factors`, `opposing_factors`, and `confidence`.
+- `report_audit.md` must explicitly cover source/出典, date/日付, contradiction/矛盾 or consistency/整合, and unavailable/取得不可 handling.
+- Do not write final prose that replaces these artifacts; preserve the machine-readable contracts because `run.sh` validates them.
+
 ---
 
 # Main Evaluation Goal

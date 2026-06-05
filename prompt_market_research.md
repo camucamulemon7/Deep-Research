@@ -33,6 +33,25 @@ Thoroughly conduct web searches and scraping according to the following priority
 
 # Research & Scope
 
+## Required staged reasoning workflow
+
+Create the final report through these auditable artifacts in this order. Do not write the
+final `morning_market_report.md` before the prior artifacts exist.
+
+1. `research_context.md`: raw but concise research notes from allowed source discovery.
+2. `market_facts.json`: normalized facts with `source_name`, `source_url`, `as_of_jst`, and `confidence`.
+3. `market_thesis.md`: center theme, bullish factors, bearish factors, Japan spillover, sector impacts, and key uncertainty.
+4. `market_score.json`: quantitative scores consistent with the thesis and report.
+5. `report_audit.md`: source/date/score consistency audit and remaining unavailable-data notes.
+6. `morning_market_report.md`: final Japanese report after fixing audit issues.
+
+Important staged reasoning rules:
+- Important numerical facts must appear in `market_facts.json` before they are used in `market_thesis.md`, `market_score.json`, or `morning_market_report.md`.
+- Do not use important numbers without `source_url` and `as_of_jst`; write `取得不可` instead.
+- Use confidence values exactly as `high`, `medium`, or `low`.
+- Scores must consider both `supporting_factors` and `opposing_factors`.
+- If `report_audit.md` finds unresolved source gaps, date mismatches, or score/report contradictions, revise the final artifacts before finishing.
+
 ## 1. US Stock Market
 - Major Indices: NY Dow, S&P 500, NASDAQ, Russell 2000
 - Sector Trends: S&P 500 sector performance, heatmap status
@@ -266,16 +285,55 @@ Generate the content exactly according to the template below. The headers and al
 
 # Artifact Saving Rules
 
-After completing all processing, create and save the following two files directly in the **$RUN_DIR**.
+After completing all processing, create and save the following files directly in the **$RUN_DIR**.
 
-### 1. `morning_market_report.md`
+### 1. `research_context.md`
 
-The complete Japanese market report formatted exactly as shown in the "Output Format" section above. It must be self-contained for Discord posting and must include source / traceability information in Section 10. Do not create a separate `sources.md`.
+Concise source-discovery notes used to build the report. Include source names, URLs, fetch/publication timestamps where available, and unavailable-data notes. This file may be in Japanese or English.
 
-### 2. `market_score.json`
+### 2. `market_facts.json`
+
+Normalized factual inputs. Use raw valid JSON only. Include at least:
+
+```json
+{
+  "as_of_jst": "YYYY-MM-DD HH:MM",
+  "target_us_session_date": "YYYY-MM-DD",
+  "target_japan_session_date": "YYYY-MM-DD",
+  "market_data": {
+    "ny_dow": {
+      "value": null,
+      "change": null,
+      "change_percent": null,
+      "source_name": "",
+      "source_url": "",
+      "as_of_jst": "",
+      "confidence": "low"
+    }
+  },
+  "top_news": [
+    {
+      "title": "",
+      "summary": "",
+      "source_name": "",
+      "source_url": "",
+      "as_of_jst": "",
+      "confidence": "low"
+    }
+  ],
+  "data_quality_notes": []
+}
+```
+
+### 3. `market_thesis.md`
+
+Japanese thesis notes explaining the center theme, bullish factors, bearish factors, Japan market spillover, sector impacts, and key uncertainty.
+
+### 4. `market_score.json`
 
 Save the quantitative scores matching the report exactly, using the schema below. This file will be used for next-day prompt improvement, so include enough quantitative structure to compare the forecast against the next day's actual market results.
 *CRITICAL: Output ONLY raw, valid JSON text when saving to this file. Do NOT wrap the contents of the file with markdown code block formatting (such as ```json or ```).
+For each major score object, include `supporting_factors`, `opposing_factors`, and `confidence` (`high`, `medium`, or `low`) when possible.
 
 ```json
 {
@@ -293,34 +351,43 @@ Save the quantitative scores matching the report exactly, using the schema below
   "japan_market_impact_score": 0,
   "risk_score": 0,
   "score_breakdown": {
-    "us_market_direction": {
-      "major_indices": 0,
-      "sector_breadth": 0,
-      "treasury_yields": 0,
-      "fx": 0,
-      "mega_cap_tech_semiconductors": 0,
-      "macro_fed": 0,
-      "rationale": ""
-    },
-    "japan_market_impact": {
-      "us_indices": 0,
-      "nasdaq_sox": 0,
-      "usd_jpy": 0,
-      "us_treasury_yields": 0,
-      "commodities": 0,
-      "domestic_catalysts": 0,
-      "rationale": ""
-    },
-    "risk": {
-      "yield_volatility": 0,
-      "fx_volatility": 0,
-      "event_risk": 0,
-      "earnings_guidance_risk": 0,
-      "geopolitical_policy_risk": 0,
-      "positioning_valuation_risk": 0,
-      "rationale": ""
-    }
-  },
+	    "us_market_direction": {
+	      "major_indices": 0,
+	      "sector_breadth": 0,
+	      "treasury_yields": 0,
+	      "fx": 0,
+	      "mega_cap_tech_semiconductors": 0,
+	      "macro_fed": 0,
+	      "rationale": "",
+	      "supporting_factors": [],
+	      "opposing_factors": [],
+	      "confidence": "low"
+	    },
+	    "japan_market_impact": {
+	      "us_indices": 0,
+	      "nasdaq_sox": 0,
+	      "usd_jpy": 0,
+	      "us_treasury_yields": 0,
+	      "commodities": 0,
+	      "domestic_catalysts": 0,
+	      "rationale": "",
+	      "supporting_factors": [],
+	      "opposing_factors": [],
+	      "confidence": "low"
+	    },
+	    "risk": {
+	      "yield_volatility": 0,
+	      "fx_volatility": 0,
+	      "event_risk": 0,
+	      "earnings_guidance_risk": 0,
+	      "geopolitical_policy_risk": 0,
+	      "positioning_valuation_risk": 0,
+	      "rationale": "",
+	      "supporting_factors": [],
+	      "opposing_factors": [],
+	      "confidence": "low"
+	    }
+	  },
   "market_data": {
     "ny_dow": { "value": null, "change": null, "change_percent": null, "as_of_jst": "", "source": "" },
     "sp500": { "value": null, "change": null, "change_percent": null, "as_of_jst": "", "source": "" },
@@ -335,17 +402,17 @@ Save the quantitative scores matching the report exactly, using the schema below
     "bitcoin": { "value": null, "change_percent": null, "as_of_jst": "", "source": "" }
   },
   "sector_scores": {
-    "semiconductor": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": ["東京エレクトロン", "アドバンテスト", "レーザーテック", "ディスコ"] },
-    "ai_datacenter": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "electronics_precision": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "automobile": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": ["トヨタ自動車", "ホンダ"] },
-    "financials": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": ["三菱UFJ", "三井住友FG"] },
-    "trading_companies": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "energy": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "defense": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "domestic_retail": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": [] },
-    "growth": { "score": 0, "direction": "", "strength": "", "rationale": "", "proxy_tickers": ["東証グロース市場250指数"] }
-  },
+	    "semiconductor": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": ["東京エレクトロン", "アドバンテスト", "レーザーテック", "ディスコ"] },
+	    "ai_datacenter": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "electronics_precision": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "automobile": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": ["トヨタ自動車", "ホンダ"] },
+	    "financials": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": ["三菱UFJ", "三井住友FG"] },
+	    "trading_companies": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "energy": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "defense": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "domestic_retail": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": [] },
+	    "growth": { "score": 0, "direction": "", "strength": "", "rationale": "", "supporting_factors": [], "opposing_factors": [], "confidence": "low", "proxy_tickers": ["東証グロース市場250指数"] }
+	  },
   "top_news": [
     {
       "title": "",
@@ -395,6 +462,19 @@ Save the quantitative scores matching the report exactly, using the schema below
 }
 
 ```
+
+### 5. `report_audit.md`
+
+Japanese validation notes created before finalizing. Check at least:
+- source coverage and source URL availability
+- date / timestamp consistency
+- contradictions between `market_facts.json`, `market_thesis.md`, `market_score.json`, and `morning_market_report.md`
+- unsupported or overconfident claims
+- unavailable-data handling
+
+### 6. `morning_market_report.md`
+
+The complete Japanese market report formatted exactly as shown in the "Output Format" section above. It must be self-contained for Discord posting and must include source / traceability information in Section 10. Do not create a separate `sources.md`.
 
 # Constraints and Prohibitions
 

@@ -41,8 +41,12 @@ This repository automates Japanese morning market reports for Discord posting.
 
 ## Output Contract
 
+- The report phase must write `research_context.md`.
+- The report phase must write `market_facts.json`.
+- The report phase must write `market_thesis.md`.
 - The report phase must write `morning_market_report.md`.
 - The report phase must write `market_score.json`.
+- The report phase must write `report_audit.md`.
 - The review phase must write `prompt_improvement.md`.
 - Preserve these filenames because `run.sh` validates them.
 - Generated reports should be self-contained enough for Discord summary posting.
@@ -53,6 +57,8 @@ This repository automates Japanese morning market reports for Discord posting.
 - If data cannot be verified, write it as unavailable in Japanese.
 - Include traceable source notes in generated reports.
 - Keep generated prose in Japanese unless a prompt explicitly requests otherwise.
+- Build reports in this order: facts before thesis, thesis before scoring, audit before final.
+- Important numerical facts need `source_url`, `as_of_jst`, and `confidence`.
 
 ## Safety Rules
 

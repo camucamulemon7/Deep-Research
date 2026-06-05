@@ -6,8 +6,9 @@ The workflow:
 
 1. Reviews the previous report when yesterday's report directory exists.
 2. Improves the market-research prompt from that review.
-3. Generates today's `morning_market_report.md` and `market_score.json`.
-4. Posts a concise summary of the report to Discord.
+3. Generates staged research artifacts, today's `morning_market_report.md`, and `market_score.json`.
+4. Validates the required artifacts.
+5. Posts a concise summary of the report to Discord.
 
 If yesterday's report directory does not exist, the review step is skipped and the base
 [`prompt_market_research.md`](prompt_market_research.md) prompt is used directly.
@@ -53,6 +54,8 @@ instead.
 - [`prompt_improvement_points.md`](prompt_improvement_points.md): Previous-report evaluation and prompt-improvement prompt.
 - [`scripts/post_to_discord.py`](scripts/post_to_discord.py): Posts a Discord-friendly report summary.
 - [`scripts/scheduler.py`](scripts/scheduler.py): Simple Docker-friendly daily scheduler.
+- [`scripts/normalize_report_artifacts.py`](scripts/normalize_report_artifacts.py): Normalizes backend output shape before validation.
+- [`scripts/validate_report_artifacts.py`](scripts/validate_report_artifacts.py): Validates staged report artifacts.
 - [`opencode.json`](opencode.json): Project-level OpenCode defaults.
 - [`.opencode/agents/market-reporter.md`](.opencode/agents/market-reporter.md): OpenCode market-report agent.
 - [`compose.yaml`](compose.yaml): Manual and scheduled Docker services.
@@ -88,6 +91,7 @@ Set at least:
 AGENT_BACKEND=agy
 AGY_BIN=/path/to/agy
 AGY_HOME=/path/to/.gemini
+OPENCODE_BIN=/path/to/opencode
 DISCORD_BOT_TOKEN=
 DISCORD_CHANNEL_ID=
 TZ=Asia/Tokyo
@@ -98,6 +102,13 @@ RUN_AT=07:30
 
 ```bash
 command -v agy
+```
+
+`OPENCODE_BIN` is the full host path to the OpenCode executable for Docker runs. Prefer
+the resolved binary path, not a symlink:
+
+```bash
+readlink -f "$(command -v opencode)"
 ```
 
 `AGY_HOME` is the host directory where Antigravity CLI stores its authentication/config.
@@ -130,7 +141,7 @@ Optional OpenCode settings:
 
 ```env
 OPENCODE_MODEL=openai/gpt-5.4-mini
-OPENCODE_AGENT=agent-name
+OPENCODE_AGENT=market-reporter
 OPENCODE_RUN_ARGS=--format json
 ```
 
@@ -139,6 +150,24 @@ repository-local `opencode.json` and `.opencode/` directory unless `OPENCODE_CON
 `OPENCODE_CONFIG_DIR` are already set.
 
 The repository-local OpenCode default model is `openai/gpt-5.4-mini`.
+
+OpenCode authentication can be provided in either of two ways:
+
+- Set provider keys such as `OPENAI_API_KEY` in `.env`.
+- Run `opencode auth login` on the host and let Docker mount the standard OpenCode auth/config directories.
+
+Docker Compose mounts these host paths by default when they exist:
+
+```text
+~/.config/opencode       -> /home/app/.config/opencode
+~/.local/share/opencode  -> /home/app/.local/share/opencode
+~/.local/state/opencode  -> /home/app/.local/state/opencode
+~/.cache/opencode        -> /home/app/.cache/opencode
+```
+
+Override them with `OPENCODE_CONFIG_HOME`, `OPENCODE_DATA_HOME`,
+`OPENCODE_STATE_HOME`, or `OPENCODE_CACHE_HOME` if your OpenCode installation stores
+auth elsewhere.
 
 ### Agent Instruction Files
 
@@ -149,12 +178,12 @@ Use [`.opencode/agents/`](.opencode/agents/) for OpenCode-specific behavior: age
 prompts, permissions, tool routing, and how OpenCode should call the local `agy` search
 wrapper.
 
-`run.sh` validates the expected output files after each agent run, so either backend must
-write the same files: `prompt_improvement.md` during the review phase and
-`morning_market_report.md` during the report phase.
+`run.sh` validates the expected output files after the report phase, so either backend must
+write the same staged artifacts during report generation.
 
-The Docker image includes the OpenCode CLI. The host `agy` binary/config is still mounted
-because OpenCode search is routed through the local `agy` wrapper.
+OpenCode and `agy` binaries are mounted from the host so Docker uses the same CLI builds
+you authenticate and update locally. OpenCode search is still routed through the local
+`agy` wrapper.
 
 ## Manual Run
 
@@ -162,7 +191,7 @@ because OpenCode search is routed through the local `agy` wrapper.
 ./run.sh
 ```
 
-For a smoke test that should generate files but not post to Discord:
+For a production-style dry run that should generate and validate files but not post to Discord:
 
 ```bash
 SKIP_DISCORD_POST=1 ./run.sh
@@ -190,6 +219,7 @@ You can also run one phase at a time:
 ```bash
 RUN_PHASE=review RUN_DATE=2026-06-04 PREVIOUS_DATE=2026-06-03 ./run.sh
 RUN_PHASE=report RUN_DATE=2026-06-04 SKIP_DISCORD_POST=1 ./run.sh
+RUN_PHASE=validate RUN_DATE=2026-06-04 ./run.sh
 RUN_PHASE=post RUN_DATE=2026-06-04 ./run.sh
 ```
 
@@ -198,7 +228,28 @@ Phase behavior:
 - `all`: run review when previous data exists, then report, then Discord post.
 - `review`: require previous data and only write review outputs plus today's improved prompt.
 - `report`: generate today's report using today's prompt if it exists, otherwise the latest improved prompt, otherwise the base prompt.
+- `validate`: validate existing report artifacts without regenerating the report.
 - `post`: post an existing `morning_market_report.md`.
+
+Artifact validation can be disabled for emergency investigation runs:
+
+```env
+SKIP_ARTIFACT_VALIDATION=1
+```
+
+By default, `run.sh` first normalizes common backend output variations before validating.
+To inspect raw agent output exactly as generated:
+
+```env
+SKIP_ARTIFACT_NORMALIZATION=1
+```
+
+`RUN_PHASE=report` removes existing generated report artifacts before asking the agent to
+produce a fresh report. To keep existing artifacts during investigation:
+
+```env
+KEEP_EXISTING_REPORT_ARTIFACTS=1
+```
 
 ## Docker Run
 
@@ -253,6 +304,27 @@ agy-market-report/YYYY-MM-DD/report/
 When using Docker Compose, the project directory is bind-mounted into the container at
 `/workspace`, so `agy-market-report/` is created and updated on the host machine as well.
 You can inspect generated files outside the container normally.
+
+The report directory contains these staged artifacts:
+
+```text
+research_context.md
+market_facts.json
+market_thesis.md
+market_score.json
+report_audit.md
+morning_market_report.md
+prompt_market_research_YYYY-MM-DD.md
+```
+
+`market_facts.json` is the factual source layer, `market_thesis.md` records the investment
+thesis, `market_score.json` captures quantitative scoring with supporting and opposing
+factors, and `report_audit.md` records source/date/consistency checks before the final
+report is posted.
+
+Because different agent backends may produce slightly different JSON shapes, `run.sh`
+normalizes common variants before validation. The normalizer preserves the original fields
+and adds the common keys expected by the validator.
 
 ## Safety Notes
 
