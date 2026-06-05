@@ -134,7 +134,7 @@ run_agent() {
       export AGY_RESEARCH_WORK_DIR="$work_dir"
 
       "$opencode_command" "${opencode_args[@]}" \
-        "Execute the instructions in the attached prompt file. Shared repository rules are available at ./.agent-tools/AGENTS.md. Only edit files in the working directory. Write all requested output files in the working directory. If current source discovery is required, write the research prompt to a local file and run ./.agent-tools/agy_research.sh PROMPT_FILE; do not call agy directly."
+        "Execute the instructions in the attached prompt file. Shared repository rules are available at ./.agent-tools/AGENTS.md. Only edit files in the working directory. Write all requested output files in the working directory. If an input/ directory exists, treat it as the complete local previous-run input bundle and do not inspect parent or sibling directories. If current source discovery is required, write the research prompt to a local file and run ./.agent-tools/agy_research.sh PROMPT_FILE; do not call agy directly."
       ;;
     *)
       echo "Unsupported AGENT_BACKEND: $backend. Use 'agy' or 'opencode'." >&2

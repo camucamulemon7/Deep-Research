@@ -32,6 +32,11 @@ You will be given the following three files related to the previous day's market
 
 When these files are provided in a workspace directory, they may be placed under an `input/` subdirectory. Read the files from that directory if present.
 
+If an `input/` subdirectory exists, treat it as the complete local input bundle. Do not
+inspect parent directories, sibling date directories, repository root files, or
+`agy-market-report/` paths. Some runners intentionally deny those paths; this is expected
+and should not block the review.
+
 ## 1. morning_market_report.md
 
 ```text

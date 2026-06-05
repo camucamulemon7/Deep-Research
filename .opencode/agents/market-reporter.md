@@ -30,6 +30,14 @@ When using shell commands, prefer `python3` over `python`. For files in the work
 directory, use simple relative paths such as `market_facts.json`; do not duplicate the
 working-directory path inside itself.
 
+For the review phase, previous-run files are provided under `input/` inside the working
+directory. Read only `input/` for local previous-report files. Do not glob or read parent
+directories, sibling date directories, or repository-level `agy-market-report/` paths; those
+are intentionally outside the OpenCode sandbox and may be denied.
+
+Hidden tool files such as `.agent-tools/agy_research.sh` may not appear in a glob result.
+If source discovery is needed, invoke `./.agent-tools/agy_research.sh` directly.
+
 ## Output Contract
 
 For the report phase, write:
