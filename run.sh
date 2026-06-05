@@ -25,6 +25,32 @@ previous_date_for() {
   TZ=Asia/Tokyo date -d "$value -1 day" +%Y-%m-%d
 }
 
+timer_now() {
+  date +%s
+}
+
+format_duration() {
+  local seconds="$1"
+  local hours=$((seconds / 3600))
+  local minutes=$(((seconds % 3600) / 60))
+  local secs=$((seconds % 60))
+
+  printf '%02d:%02d:%02d' "$hours" "$minutes" "$secs"
+}
+
+log_timing() {
+  local label="$1"
+  local start="$2"
+  local end="$3"
+  local elapsed=$((end - start))
+
+  printf '[timing] %-24s %s (%s -> %s)\n' \
+    "$label" \
+    "$(format_duration "$elapsed")" \
+    "$(TZ=Asia/Tokyo date -d "@$start" '+%Y-%m-%d %H:%M:%S %Z')" \
+    "$(TZ=Asia/Tokyo date -d "@$end" '+%Y-%m-%d %H:%M:%S %Z')"
+}
+
 find_previous_prompt() {
   local previous_report_dir="$1"
   local previous_date="$2"
@@ -136,7 +162,7 @@ run_agent() {
       export AGY_RESEARCH_WORK_DIR="$work_dir"
 
       "$opencode_command" "${opencode_args[@]}" \
-        "Execute the instructions in the attached prompt file. Shared repository rules are available at ./.agent-tools/AGENTS.md. Only edit files in the working directory. Write all requested output files in the working directory. If an input/ directory exists, treat it as the complete local previous-run input bundle and do not inspect parent or sibling directories. If current source discovery is required, write the research prompt to a local file and run ./.agent-tools/agy_research.sh PROMPT_FILE; do not call agy directly."
+        "Execute the instructions in the attached prompt file. Shared repository rules are available at ./.agent-tools/AGENTS.md. Only edit files in the working directory. Write all requested output files in the working directory. If an input/ directory exists, treat it as the complete local previous-run input bundle and do not inspect parent or sibling directories. If current source discovery is required, write the research prompt to a local file and run ./.agent-tools/agy_research.sh PROMPT_FILE with a shell timeout of at least 600000 milliseconds; do not call agy directly."
       ;;
     *)
       echo "Unsupported AGENT_BACKEND: $backend. Use 'agy' or 'opencode'." >&2
@@ -146,6 +172,8 @@ run_agent() {
 }
 
 BASE_DIR="$PWD"
+RUN_STARTED_AT="$(timer_now)"
+echo "[timing] run start $(TZ=Asia/Tokyo date -d "@$RUN_STARTED_AT" '+%Y-%m-%d %H:%M:%S %Z')"
 
 if [[ -f "$BASE_DIR/.env" ]]; then
   while IFS= read -r env_line || [[ -n "$env_line" ]]; do
@@ -199,6 +227,11 @@ fi
 
 run_review_phase() {
   local require_previous="$1"
+  local phase_started_at
+  local phase_finished_at
+
+  phase_started_at="$(timer_now)"
+  echo "[timing] review start $(TZ=Asia/Tokyo date -d "@$phase_started_at" '+%Y-%m-%d %H:%M:%S %Z')"
 
   if [[ ! -d "$YESTERDAY_DIR" ]]; then
     if [[ "$require_previous" == "1" ]]; then
@@ -207,6 +240,8 @@ run_review_phase() {
     fi
     echo "Yesterday directory not found, skipping review phase: $YESTERDAY_DIR" >&2
     cp "$BASE_REPORT_PROMPT" "$REPORT_PROMPT"
+    phase_finished_at="$(timer_now)"
+    log_timing "review skipped" "$phase_started_at" "$phase_finished_at"
     return
   fi
 
@@ -224,6 +259,14 @@ run_review_phase() {
   fi
 
   mkdir -p "$RESULT_INPUT_DIR"
+  rm -f \
+    "$RESULT_DIR/next_day_evaluation_report.md" \
+    "$RESULT_DIR/evaluation_score.json" \
+    "$RESULT_DIR/prompt_improvement.md" \
+    "$RESULT_DIR/research_context_eval.json" \
+    "$RESULT_DIR/research_prompt_eval.md" \
+    "$RESULT_DIR/research_prompt_eval2.md" \
+    "$RESULT_DIR/agy_research_timing.log"
 
   for required_file in "$PREVIOUS_REPORT_FILE" "$PREVIOUS_REPORT_DIR/market_score.json"; do
     if [[ ! -f "$required_file" ]]; then
@@ -241,7 +284,12 @@ run_review_phase() {
   fi
   link_input_file "$ORIGINAL_PROMPT"
 
+  local agent_started_at
+  local agent_finished_at
+  agent_started_at="$(timer_now)"
   run_agent "$RESULT_DIR" "$BASE_DIR/prompt_improvement_points.md" "market prompt review $TODAY"
+  agent_finished_at="$(timer_now)"
+  log_timing "review agent" "$agent_started_at" "$agent_finished_at"
 
   if [[ ! -f "$IMPROVED_PROMPT" ]]; then
     echo "Improved prompt not found: $IMPROVED_PROMPT" >&2
@@ -249,6 +297,8 @@ run_review_phase() {
   fi
 
   cp "$IMPROVED_PROMPT" "$REPORT_PROMPT"
+  phase_finished_at="$(timer_now)"
+  log_timing "review total" "$phase_started_at" "$phase_finished_at"
 }
 
 prepare_report_prompt() {
@@ -278,13 +328,24 @@ clean_report_artifacts() {
     "$REPORT_DIR/market_score.json" \
     "$REPORT_DIR/report_audit.md" \
     "$REPORT_DIR/morning_market_report.md" \
-    "$REPORT_DIR/execution_plan.md"
+    "$REPORT_DIR/execution_plan.md" \
+    "$REPORT_DIR/agy_research_timing.log"
 }
 
 run_report_phase() {
+  local phase_started_at
+  local phase_finished_at
+  local agent_started_at
+  local agent_finished_at
+
+  phase_started_at="$(timer_now)"
+  echo "[timing] report start $(TZ=Asia/Tokyo date -d "@$phase_started_at" '+%Y-%m-%d %H:%M:%S %Z')"
   prepare_report_prompt
   clean_report_artifacts
+  agent_started_at="$(timer_now)"
   run_agent "$REPORT_DIR" "$REPORT_PROMPT" "morning market report $TODAY"
+  agent_finished_at="$(timer_now)"
+  log_timing "report agent" "$agent_started_at" "$agent_finished_at"
 
   if [[ ! -f "$MORNING_REPORT" ]]; then
     echo "Morning market report not found: $MORNING_REPORT" >&2
@@ -292,11 +353,19 @@ run_report_phase() {
   fi
 
   run_validate_phase
+  phase_finished_at="$(timer_now)"
+  log_timing "report total" "$phase_started_at" "$phase_finished_at"
 }
 
 run_validate_phase() {
+  local phase_started_at
+  local phase_finished_at
+  phase_started_at="$(timer_now)"
+
   if [[ "${SKIP_ARTIFACT_VALIDATION:-0}" == "1" ]]; then
     echo "SKIP_ARTIFACT_VALIDATION=1, skipping artifact validation: $REPORT_DIR" >&2
+    phase_finished_at="$(timer_now)"
+    log_timing "validate skipped" "$phase_started_at" "$phase_finished_at"
     return
   fi
 
@@ -305,7 +374,12 @@ run_validate_phase() {
       echo "Report artifact normalizer not found or not executable: $NORMALIZER" >&2
       exit 1
     fi
+    local normalize_started_at
+    local normalize_finished_at
+    normalize_started_at="$(timer_now)"
     "$NORMALIZER" "$REPORT_DIR"
+    normalize_finished_at="$(timer_now)"
+    log_timing "normalize" "$normalize_started_at" "$normalize_finished_at"
   fi
 
   if [[ ! -x "$VALIDATOR" ]]; then
@@ -313,7 +387,14 @@ run_validate_phase() {
     exit 1
   fi
 
+  local validate_started_at
+  local validate_finished_at
+  validate_started_at="$(timer_now)"
   "$VALIDATOR" "$REPORT_DIR"
+  validate_finished_at="$(timer_now)"
+  log_timing "validate" "$validate_started_at" "$validate_finished_at"
+  phase_finished_at="$(timer_now)"
+  log_timing "validate total" "$phase_started_at" "$phase_finished_at"
 }
 
 run_post_phase() {
@@ -353,3 +434,6 @@ case "$RUN_PHASE" in
     exit 1
     ;;
 esac
+
+RUN_FINISHED_AT="$(timer_now)"
+log_timing "run total" "$RUN_STARTED_AT" "$RUN_FINISHED_AT"

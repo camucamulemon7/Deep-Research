@@ -270,6 +270,27 @@ produce a fresh report. To keep existing artifacts during investigation:
 KEEP_EXISTING_REPORT_ARTIFACTS=1
 ```
 
+### Timing Logs
+
+`run.sh` prints phase timing lines during each run:
+
+```text
+[timing] review agent 00:13:40 (...)
+[timing] report agent 00:19:40 (...)
+[timing] run total    00:33:20 (...)
+```
+
+When OpenCode routes source discovery through `agy`, the wrapper also writes per-search
+timing to the active work directory:
+
+```text
+agy-market-report/YYYY-MM-DD/result/agy_research_timing.log
+agy-market-report/YYYY-MM-DD/report/agy_research_timing.log
+```
+
+These sidecar logs are kept out of the research JSON so timing metadata does not pollute
+the report inputs.
+
 ## Docker Run
 
 Build:

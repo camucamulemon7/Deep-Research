@@ -84,8 +84,9 @@ source discovery is required:
 ./.agent-tools/agy_research.sh research_prompt.md > research_context.json
 ```
 
-The wrapper adds sandboxing, `--print-timeout`, and the `WebSearch:` prefix used by the
-Antigravity/Gemini search path.
+Run this shell command with a timeout of at least 600000 milliseconds. The wrapper adds
+sandboxing, `--print-timeout`, and the `WebSearch:` prefix used by the Antigravity/Gemini
+search path.
 
 If the wrapper fails or returns unusable research context, mark the affected values as
 unavailable instead of switching to another search path.
