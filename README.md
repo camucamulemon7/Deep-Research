@@ -140,8 +140,8 @@ OPENCODE_COMMAND=opencode
 Optional OpenCode settings:
 
 ```env
-OPENCODE_MODEL=openai/gpt-5.4-mini
-OPENCODE_AGENT=market-reporter
+OPENCODE_MODEL=
+OPENCODE_AGENT=
 OPENCODE_RUN_ARGS=--format json
 ```
 
@@ -149,12 +149,31 @@ When `AGENT_BACKEND=opencode`, `run.sh` automatically points OpenCode at the
 repository-local `opencode.json` and `.opencode/` directory unless `OPENCODE_CONFIG` or
 `OPENCODE_CONFIG_DIR` are already set.
 
-The repository-local OpenCode default model is `openai/gpt-5.4-mini`.
+The repository-local OpenCode defaults are configured in `opencode.json`:
+
+```json
+{
+  "model": "openai/gpt-5.4-mini",
+  "default_agent": "market-reporter"
+}
+```
+
+Use `.env` only for temporary overrides. If `OPENCODE_MODEL` is non-empty, `run.sh` passes
+`--model "$OPENCODE_MODEL"` to `opencode run`, which overrides the model in `opencode.json`.
+The same applies to `OPENCODE_AGENT`.
 
 OpenCode authentication can be provided in either of two ways:
 
 - Set provider keys such as `OPENAI_API_KEY` in `.env`.
 - Run `opencode auth login` on the host and let Docker mount the standard OpenCode auth/config directories.
+
+For Zhipu/ZAi models, provider names matter:
+
+- `zhipuai-coding-plan/glm-5.1` uses the Zhipu AI Coding Plan provider.
+- `zai-coding-plan/glm-5.1` uses the Z.AI Coding Plan provider.
+
+Run `opencode auth login` for the provider you want to use, or set `ZHIPU_API_KEY` in
+`.env` when you prefer environment-based auth.
 
 Docker Compose mounts these host paths by default when they exist:
 

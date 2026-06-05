@@ -89,6 +89,7 @@ run_agent() {
       local opencode_tool_dir="$work_dir/.agent-tools"
       local opencode_research_tool="$opencode_tool_dir/agy_research.sh"
       local opencode_shared_instructions="$opencode_tool_dir/AGENTS.md"
+      local opencode_prompt_file="$opencode_tool_dir/$(basename "$prompt_file")"
       local -a opencode_args
 
       if ! command -v "$opencode_command" >/dev/null 2>&1; then
@@ -99,6 +100,7 @@ run_agent() {
       mkdir -p "$opencode_tool_dir"
       cp "$BASE_DIR/scripts/agy_research.sh" "$opencode_research_tool"
       chmod +x "$opencode_research_tool"
+      cp "$prompt_file" "$opencode_prompt_file"
       if [[ -f "$BASE_DIR/AGENTS.md" ]]; then
         cp "$BASE_DIR/AGENTS.md" "$opencode_shared_instructions"
       fi
@@ -114,7 +116,7 @@ run_agent() {
       opencode_args=(
         run
         --dir "$work_dir"
-        --file "$prompt_file"
+        --file "$opencode_prompt_file"
         --title "$title"
       )
 

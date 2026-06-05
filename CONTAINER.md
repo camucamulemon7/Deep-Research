@@ -83,15 +83,23 @@ To use OpenCode instead:
 ```env
 AGENT_BACKEND=opencode
 OPENCODE_COMMAND=opencode
-OPENCODE_MODEL=openai/gpt-5.4-mini
-OPENCODE_AGENT=market-reporter
+OPENCODE_MODEL=
+OPENCODE_AGENT=
 OPENCODE_RUN_ARGS=
 OPENCODE_CONFIG=
 OPENCODE_CONFIG_DIR=
 ```
 
+Leave `OPENCODE_MODEL` and `OPENCODE_AGENT` blank to use the project defaults in
+`opencode.json` (`openai/gpt-5.4-mini` and `market-reporter`). Set them only when you want
+to override those defaults for a specific run.
+
 The host OpenCode binary is mounted to `/usr/local/bin/opencode`. Make sure provider
 credentials are available through environment variables or OpenCode's config/auth files.
+For Zhipu/ZAi models, provider names matter: `zhipuai-coding-plan/glm-5.1` uses the
+Zhipu AI Coding Plan provider, while `zai-coding-plan/glm-5.1` uses the Z.AI Coding Plan
+provider. Run `opencode auth login` for the provider you want to use, or set
+`ZHIPU_API_KEY` in `.env` when you prefer environment-based auth.
 The host `agy` command is still mounted because OpenCode routes web search through the
 local `agy` wrapper.
 
