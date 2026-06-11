@@ -76,6 +76,8 @@ The improved prompt must keep these staged-reasoning rules:
 - `market_facts.json` must include top-level `as_of_jst`, `target_us_session_date`, `target_japan_session_date`, non-empty `market_data`, and non-empty `top_news`.
 - Each important fact must include `source_name`, `source_url`, `as_of_jst`, and `confidence`.
 - Every major score object and sector score in `market_score.json` must include `supporting_factors`, `opposing_factors`, and `confidence`.
+- JSON artifacts must be raw valid JSON only, with no Markdown code fences and no prose before or after the JSON object.
+- JSON values must contain final literal values only. Do not leave calculations, formulas, or arithmetic expressions such as `64900 - 64179.27` in JSON fields; calculate the result first and put calculation rationale in a separate text field.
 - `report_audit.md` must explicitly cover source/出典, date/日付, contradiction/矛盾 or consistency/整合, and unavailable/取得不可 handling.
 - Do not write final prose that replaces these artifacts; preserve the machine-readable contracts because `run.sh` validates them.
 
@@ -546,6 +548,9 @@ To make next-day evaluation possible, the report must explicitly include the fol
 - Forecast direction: Tailwind / Neutral / Headwind
 - Forecast strength: Strong / Medium / Weak
 - Actual indicators to check during next-day evaluation
+- JSON artifacts must be raw valid JSON only. Do not wrap JSON in Markdown code fences or add prose before or after the JSON object.
+- JSON values must contain final literal values only, never formulas or arithmetic expressions.
+- Validate `market_facts.json` and `market_score.json` with a JSON parser before writing the final report.
 ```
 
 ### Add these fields to market_score.json

@@ -68,6 +68,20 @@ Do not write the final report before the fact, thesis, score, and audit artifact
 If the audit finds unresolved source gaps, date mismatches, or contradictions, fix the
 affected artifacts before finishing.
 
+JSON artifact rules:
+
+- Write `.json` artifacts as raw valid JSON only. Do not wrap them in Markdown code fences
+  and do not add prose before or after the JSON object.
+- JSON values must be final literal values only. Never leave calculations, formulas, or
+  arithmetic expressions such as `64900 - 64179.27` in a JSON value; calculate the result
+  first and write the number, with the explanation in a separate note/rationale field.
+- Prefer writing `market_facts.json`, `market_score.json`, and review-phase
+  `evaluation_score.json` through `python3` with `json.dump(..., ensure_ascii=False,
+  indent=2)` instead of hand-writing long JSON text.
+- Immediately validate every `.json` artifact after writing it with
+  `python3 -m json.tool FILE >/dev/null`. If validation fails, rewrite the file before
+  moving to the next artifact.
+
 ## Search Routing
 
 OpenCode native search is disabled for this workflow. When current market information or
