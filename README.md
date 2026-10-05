@@ -375,3 +375,17 @@ and adds the common keys expected by the validator.
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+## Development checks
+
+Run the offline regression tests with the Python standard library (no provider credentials
+or Discord connection required):
+
+```bash
+python3 -m unittest discover -s tests -v
+bash -n run.sh scripts/agy_research.sh
+```
+
+The workflow smoke tests use `scripts/smoke_opencode_runner.py` in a temporary directory.
+Local runs support both GNU date (Linux) and BSD date (macOS); use `YYYY-MM-DD` for
+`RUN_DATE` and `PREVIOUS_DATE` on macOS.

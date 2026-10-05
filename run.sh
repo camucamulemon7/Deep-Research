@@ -13,16 +13,39 @@ normalize_date() {
   local value="$1"
   local label="$2"
 
-  if ! TZ=Asia/Tokyo date -d "$value" +%Y-%m-%d; then
+  local normalized
+  if [[ "$DATE_STYLE" == "gnu" ]]; then
+    normalized="$(TZ=Asia/Tokyo date -d "$value" +%Y-%m-%d)" || normalized=""
+  else
+    normalized="$(TZ=Asia/Tokyo date -j -f '%Y-%m-%d' "$value" +%Y-%m-%d)" || normalized=""
+    # BSD date rolls impossible calendar dates forward instead of rejecting them.
+    if [[ "$normalized" != "$value" ]]; then
+      normalized=""
+    fi
+  fi
+  if [[ -z "$normalized" ]]; then
     echo "Invalid $label date: $value" >&2
     exit 1
   fi
+  printf '%s\n' "$normalized"
 }
 
 previous_date_for() {
   local value="$1"
 
-  TZ=Asia/Tokyo date -d "$value -1 day" +%Y-%m-%d
+  if [[ "$DATE_STYLE" == "gnu" ]]; then
+    TZ=Asia/Tokyo date -d "$value -1 day" +%Y-%m-%d
+  else
+    TZ=Asia/Tokyo date -j -v-1d -f '%Y-%m-%d' "$value" +%Y-%m-%d
+  fi
+}
+
+timestamp_label() {
+  if [[ "$DATE_STYLE" == "gnu" ]]; then
+    TZ=Asia/Tokyo date -d "@$1" '+%Y-%m-%d %H:%M:%S %Z'
+  else
+    TZ=Asia/Tokyo date -r "$1" '+%Y-%m-%d %H:%M:%S %Z'
+  fi
 }
 
 timer_now() {
@@ -47,8 +70,8 @@ log_timing() {
   printf '[timing] %-24s %s (%s -> %s)\n' \
     "$label" \
     "$(format_duration "$elapsed")" \
-    "$(TZ=Asia/Tokyo date -d "@$start" '+%Y-%m-%d %H:%M:%S %Z')" \
-    "$(TZ=Asia/Tokyo date -d "@$end" '+%Y-%m-%d %H:%M:%S %Z')"
+    "$(timestamp_label "$start")" \
+    "$(timestamp_label "$end")"
 }
 
 find_previous_prompt() {
@@ -172,8 +195,13 @@ run_agent() {
 }
 
 BASE_DIR="$PWD"
+if date -d '@0' +%s >/dev/null 2>&1; then
+  DATE_STYLE=gnu
+else
+  DATE_STYLE=bsd
+fi
 RUN_STARTED_AT="$(timer_now)"
-echo "[timing] run start $(TZ=Asia/Tokyo date -d "@$RUN_STARTED_AT" '+%Y-%m-%d %H:%M:%S %Z')"
+echo "[timing] run start $(timestamp_label "$RUN_STARTED_AT")"
 
 if [[ -f "$BASE_DIR/.env" ]]; then
   while IFS= read -r env_line || [[ -n "$env_line" ]]; do
@@ -231,7 +259,7 @@ run_review_phase() {
   local phase_finished_at
 
   phase_started_at="$(timer_now)"
-  echo "[timing] review start $(TZ=Asia/Tokyo date -d "@$phase_started_at" '+%Y-%m-%d %H:%M:%S %Z')"
+  echo "[timing] review start $(timestamp_label "$phase_started_at")"
 
   if [[ ! -d "$YESTERDAY_DIR" ]]; then
     if [[ "$require_previous" == "1" ]]; then
@@ -339,7 +367,7 @@ run_report_phase() {
   local agent_finished_at
 
   phase_started_at="$(timer_now)"
-  echo "[timing] report start $(TZ=Asia/Tokyo date -d "@$phase_started_at" '+%Y-%m-%d %H:%M:%S %Z')"
+  echo "[timing] report start $(timestamp_label "$phase_started_at")"
   prepare_report_prompt
   clean_report_artifacts
   agent_started_at="$(timer_now)"
