@@ -28,11 +28,14 @@ def require_file(path, errors):
     if not path.is_file():
         errors.append(f"missing required file: {path.name}")
         return ""
-    return path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        errors.append(f"{path.name} must not be empty")
+    return text
 
 
 def validate_confidence(value, path, errors):
-    if value not in CONFIDENCE_VALUES:
+    if not isinstance(value, str) or value not in CONFIDENCE_VALUES:
         errors.append(f"{path} confidence must be one of {sorted(CONFIDENCE_VALUES)}")
 
 
@@ -149,13 +152,12 @@ def main():
     market_facts = load_json(report_dir / "market_facts.json", errors)
     market_score = load_json(report_dir / "market_score.json", errors)
     report_text = require_file(report_dir / "morning_market_report.md", errors)
+    require_file(report_dir / "research_context.md", errors)
     require_file(report_dir / "market_thesis.md", errors)
     audit_text = require_file(report_dir / "report_audit.md", errors)
 
-    if market_facts is not None:
-        validate_market_facts(market_facts, errors)
-    if market_score is not None:
-        validate_market_score(market_score, errors)
+    validate_market_facts(market_facts, errors)
+    validate_market_score(market_score, errors)
     if report_text:
         validate_report(report_text, errors)
     if audit_text:

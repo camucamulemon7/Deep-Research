@@ -249,7 +249,7 @@ def source_name_from_url(url):
 
 
 def normalize_confidence(value):
-    return value if value in CONFIDENCE_VALUES else "low"
+    return value if isinstance(value, str) and value in CONFIDENCE_VALUES else "low"
 
 
 def normalize_fact_item(item):
